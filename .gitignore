@@ -1,22 +1,24 @@
-# secrets / env
-*.env
+# ---- secrets / env (do NOT commit) ----
 bootstrap.env
+*.env
 .env
 .env.*
 !*.env.example
 
-# ssh keys
+# ---- ssh keys (do NOT commit) ----
+id_*
 *.pem
-id_* 
-id_*.pub
+*.key
 
-# cloudflared credentials
+# ---- cloudflared credentials (do NOT commit) ----
 **/.cloudflared/
 **/cloudflared/*.json
 /etc/cloudflared/*.json
 
-# compose overrides / local data
+# ---- runtime data (do NOT commit) ----
 **/pg_data/
 **/valkey_data/
 **/data/
 **/backups/
+**/caddy_data/
+**/caddy_config/
