@@ -58,7 +58,7 @@ detect_tier(){
   if [[ -n "${FORCE_RAM_TIER:-}" ]]; then
     case "$FORCE_RAM_TIER" in
       S|M|L|XL) RAM_TIER="$FORCE_RAM_TIER"; return 0 ;;
-      *) die "FORCE_RAM_TIER 仅支持 S/M/L/XL" ;;
+      *) die "FORCE_RAM_TIER only supports S/M/L/XL" ;;
     esac
   fi
 
@@ -81,6 +81,6 @@ apply_ram_tier_defaults(){
     M) apply_tier_m ;;
     L) apply_tier_l ;;
     XL) apply_tier_xl ;;
-    *) die "未知 RAM_TIER: $RAM_TIER" ;;
+    *) die "Unknown RAM_TIER: $RAM_TIER" ;;
   esac
 }

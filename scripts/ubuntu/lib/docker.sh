@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 install_docker_latest(){
-  log "安装 Docker（官方 APT 仓库）"
+  log "Install Docker (official APT repository)"
 
   install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -14,7 +14,7 @@ install_docker_latest(){
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
   systemctl enable --now docker
-  systemctl is-active --quiet docker || die "Docker 服务未成功启动"
+  systemctl is-active --quiet docker || die "Docker service failed to start"
 
   install -d /etc/docker
   cat >/etc/docker/daemon.json <<'CFG'

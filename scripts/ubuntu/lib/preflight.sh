@@ -31,40 +31,40 @@ check_os(){
   local os_id
   local os_version
 
-  [[ -f /etc/os-release ]] || die "找不到 /etc/os-release，无法识别系统"
+  [[ -f /etc/os-release ]] || die "Cannot find /etc/os-release; unable to detect OS"
   # shellcheck disable=SC1091
   source /etc/os-release
 
   os_id="${ID:-unknown}"
   os_version="${VERSION_ID:-unknown}"
 
-  [[ "$os_id" == "ubuntu" ]] || fail_or_warn "当前系统不是 Ubuntu（ID=${os_id}）"
+  [[ "$os_id" == "ubuntu" ]] || fail_or_warn "Current OS is not Ubuntu (ID=${os_id})"
 
   if command -v dpkg >/dev/null 2>&1; then
-    dpkg --compare-versions "$os_version" ge "24.04" || fail_or_warn "Ubuntu 版本过旧：${os_version}（需要 24.04+）"
+    dpkg --compare-versions "$os_version" ge "24.04" || fail_or_warn "Ubuntu version is too old: ${os_version} (requires 24.04+)"
   else
-    fail_or_warn "缺少 dpkg，无法比较 Ubuntu 版本"
+    fail_or_warn "Missing dpkg; unable to compare Ubuntu version"
   fi
 
   OS_VERSION="$os_version"
 }
 
 check_systemd(){
-  [[ -d /run/systemd/system ]] || fail_or_warn "未检测到 systemd 运行环境（/run/systemd/system 不存在）"
-  command -v systemctl >/dev/null 2>&1 || fail_or_warn "缺少 systemctl，无法管理服务"
+  [[ -d /run/systemd/system ]] || fail_or_warn "No systemd runtime detected (/run/systemd/system missing)"
+  command -v systemctl >/dev/null 2>&1 || fail_or_warn "Missing systemctl; unable to manage services"
 }
 
 check_apt_update(){
   export DEBIAN_FRONTEND=noninteractive
-  apt-get update -y >/dev/null 2>&1 || fail_or_warn "apt-get update 失败（检查外网、DNS 或镜像源）"
+  apt-get update -y >/dev/null 2>&1 || fail_or_warn "apt-get update failed (check internet, DNS, or mirror)"
 }
 
 check_network_egress(){
   local docker_repo_url="https://download.docker.com/linux/ubuntu/dists/"
   local cf_repo_url="https://pkg.cloudflare.com/cloudflared/dists/any/InRelease"
 
-  curl -fsSLI --connect-timeout 8 "$docker_repo_url" >/dev/null 2>&1 || fail_or_warn "无法访问 Docker APT 仓库：$docker_repo_url"
-  curl -fsSLI --connect-timeout 8 "$cf_repo_url" >/dev/null 2>&1 || fail_or_warn "无法访问 Cloudflare APT 仓库：$cf_repo_url"
+  curl -fsSLI --connect-timeout 8 "$docker_repo_url" >/dev/null 2>&1 || fail_or_warn "Cannot reach Docker APT repository: $docker_repo_url"
+  curl -fsSLI --connect-timeout 8 "$cf_repo_url" >/dev/null 2>&1 || fail_or_warn "Cannot reach Cloudflare APT repository: $cf_repo_url"
 }
 
 collect_resources(){
@@ -95,19 +95,19 @@ collect_resources(){
 }
 
 check_min_resources(){
-  (( RAM_GB >= MIN_RAM_GB )) || fail_or_warn "内存不足：${RAM_GB}GiB（最低 ${MIN_RAM_GB}GiB）"
-  (( CPU_CORES >= MIN_CPU_CORES )) || fail_or_warn "CPU 核心不足：${CPU_CORES}（最低 ${MIN_CPU_CORES}）"
-  (( DISK_FREE_GB >= MIN_DISK_FREE_GB )) || fail_or_warn "可用磁盘不足：${DISK_FREE_GB}GiB（最低 ${MIN_DISK_FREE_GB}GiB）"
+  (( RAM_GB >= MIN_RAM_GB )) || fail_or_warn "Insufficient RAM: ${RAM_GB}GiB (minimum ${MIN_RAM_GB}GiB)"
+  (( CPU_CORES >= MIN_CPU_CORES )) || fail_or_warn "Insufficient CPU cores: ${CPU_CORES} (minimum ${MIN_CPU_CORES})"
+  (( DISK_FREE_GB >= MIN_DISK_FREE_GB )) || fail_or_warn "Insufficient free disk space: ${DISK_FREE_GB}GiB (minimum ${MIN_DISK_FREE_GB}GiB)"
 }
 
 check_disk_risk(){
-  [[ "$DISK_ROTA" != "1" ]] || append_warning "根盘疑似 HDD（ROTA=1），RAG 写入/索引/PG checkpoint 可能抖动"
+  [[ "$DISK_ROTA" != "1" ]] || append_warning "Root disk appears to be HDD (ROTA=1); RAG writes/indexing/PG checkpoints may be unstable"
 }
 
 print_preflight_report(){
   local item
 
-  log "Preflight 检查结果"
+  log "Preflight check results"
   echo "  OS_VERSION=${OS_VERSION}"
   echo "  RAM_GB=${RAM_GB}"
   echo "  CPU_CORES=${CPU_CORES}"
@@ -128,7 +128,7 @@ print_preflight_report(){
     for item in "${PREFLIGHT_FAILURES[@]}"; do
       echo "  - $item"
     done
-    die "Preflight 未通过，请先修复失败项"
+    die "Preflight failed; fix reported failures first"
   fi
 }
 

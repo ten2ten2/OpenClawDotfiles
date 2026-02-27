@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 apt_basics(){
-  log "系统更新 + 基础工具"
+  log "System update + baseline tools"
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y
   apt-get upgrade -y
@@ -13,32 +13,32 @@ apt_basics(){
 }
 
 set_identity(){
-  log "设置主机名/时区"
+  log "Set hostname/timezone"
   hostnamectl set-hostname "$HOSTNAME_FQDN" || true
   timedatectl set-timezone "$TIMEZONE" || true
 }
 
 create_admin(){
-  log "创建/确认管理员用户：$ADMIN_USER"
+  log "Create/verify admin user: $ADMIN_USER"
   if ! id -u "$ADMIN_USER" >/dev/null 2>&1; then
     adduser --disabled-password --gecos "" "$ADMIN_USER"
     usermod -aG sudo "$ADMIN_USER"
   fi
 
   if [[ -n "$SSH_PUBKEY" ]]; then
-    log "写入 $ADMIN_USER 的 SSH 公钥"
+    log "Write SSH public key for $ADMIN_USER"
     install -d -m 700 "/home/$ADMIN_USER/.ssh"
     echo "$SSH_PUBKEY" > "/home/$ADMIN_USER/.ssh/authorized_keys"
     chmod 600 "/home/$ADMIN_USER/.ssh/authorized_keys"
     chown -R "$ADMIN_USER:$ADMIN_USER" "/home/$ADMIN_USER/.ssh"
   else
-    warn "未设置 SSH_PUBKEY：将跳过禁密码/禁 root 远程，避免锁死"
+    warn "SSH_PUBKEY is not set: skipping password/root-SSH lockout to avoid losing access"
   fi
 }
 
 ssh_hardening(){
-  log "SSH 加固"
-  [[ -n "$SSH_PUBKEY" ]] || { echo "  跳过（SSH_PUBKEY 为空）"; return 0; }
+  log "SSH hardening"
+  [[ -n "$SSH_PUBKEY" ]] || { echo "  Skipped (SSH_PUBKEY is empty)"; return 0; }
 
   install -d /etc/ssh/sshd_config.d
   cat >/etc/ssh/sshd_config.d/99-openclaw.conf <<CFG
@@ -58,7 +58,7 @@ CFG
 }
 
 firewall(){
-  log "UFW：仅放行 SSH"
+  log "UFW: allow SSH only"
   ufw default deny incoming
   ufw default allow outgoing
   ufw allow "${SSH_PORT}/tcp"
@@ -67,7 +67,7 @@ firewall(){
 }
 
 fail2ban_cfg(){
-  log "fail2ban：启用 sshd 保护"
+  log "fail2ban: enable sshd protection"
   cat >/etc/fail2ban/jail.d/sshd.local <<'CFG'
 [sshd]
 enabled = true
@@ -79,12 +79,12 @@ CFG
 }
 
 unattended_upgrades(){
-  log "启用 unattended-upgrades"
+  log "Enable unattended-upgrades"
   dpkg-reconfigure -f noninteractive unattended-upgrades || true
 }
 
 swap_and_sysctl(){
-  log "配置 swap(${SWAP_GB}GB) + sysctl"
+  log "Configure swap (${SWAP_GB}GB) + sysctl"
 
   if ! swapon --show | grep -q "/swapfile"; then
     fallocate -l "${SWAP_GB}G" /swapfile || dd if=/dev/zero of=/swapfile bs=1G count="${SWAP_GB}"
@@ -112,7 +112,7 @@ CFG
 }
 
 disable_thp(){
-  log "关闭 THP"
+  log "Disable THP"
   cat >/etc/systemd/system/disable-thp.service <<'CFG'
 [Unit]
 Description=Disable Transparent Huge Pages (THP)
@@ -132,7 +132,7 @@ CFG
 }
 
 raise_limits(){
-  log "提高 nofile"
+  log "Increase nofile limits"
 
   cat >/etc/security/limits.d/99-openclaw.conf <<'CFG'
 * soft nofile 65535

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 render_infra(){
-  log "生成 ${OPENCLAW_BASE}/infra（pgvector + valkey）"
+  log "Generate ${OPENCLAW_BASE}/infra (pgvector + valkey)"
 
   local infra_dir="${OPENCLAW_BASE}/infra"
   install -d -m 750 "${infra_dir}/db-init" "${OPENCLAW_BASE}/data" "${OPENCLAW_BASE}/backups"
@@ -35,7 +35,7 @@ CFG
 maybe_start_infra(){
   [[ "${START_INFRA}" == "1" ]] || return 0
 
-  log "启动 infra（pgvector + valkey）"
+  log "Start infra (pgvector + valkey)"
   ( cd "${OPENCLAW_BASE}/infra" && docker compose -f docker-compose.infra.yml up -d )
   docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 }

@@ -9,17 +9,17 @@ START_INFRA="${START_INFRA:-0}"
 log(){ echo -e "\n[+] $*\n"; }
 warn(){ echo -e "\n[!] $*\n" >&2; }
 die(){ echo -e "\n[x] $*\n" >&2; exit 1; }
-need_root(){ [[ ${EUID:-$(id -u)} -eq 0 ]] || die "请用 sudo/root 运行"; }
+need_root(){ [[ ${EUID:-$(id -u)} -eq 0 ]] || die "Please run with sudo/root"; }
 
 load_env(){
-  [[ -f "$BOOTSTRAP_ENV" ]] || die "未找到 $BOOTSTRAP_ENV（请从 templates/bootstrap.env.example 复制并填写）"
+  [[ -f "$BOOTSTRAP_ENV" ]] || die "Could not find $BOOTSTRAP_ENV (copy from templates/bootstrap.env.example and fill in values)"
 
   set -a
   # shellcheck disable=SC1090
   source "$BOOTSTRAP_ENV"
   set +a
 
-  : "${ADMIN_USER:?ADMIN_USER 未设置}"
+  : "${ADMIN_USER:?ADMIN_USER is not set}"
   : "${TIMEZONE:=America/Los_Angeles}"
   : "${HOSTNAME_FQDN:=openclaw-1}"
   : "${SSH_PORT:=22}"
@@ -110,7 +110,7 @@ main(){
 
   print_summary
 
-  log "完成。下一步：sudo bash scripts/cloudflare/setup_tunnel.sh"
+  log "Done. Next step: sudo bash scripts/cloudflare/setup_tunnel.sh"
 }
 
 main "$@"

@@ -9,7 +9,7 @@ warn(){ echo -e "\n[!] $*\n" >&2; }
 die(){ echo -e "\n[x] $*\n" >&2; exit 1; }
 
 load_env(){
-  [[ -f "$BOOTSTRAP_ENV" ]] || die "未找到 $BOOTSTRAP_ENV"
+  [[ -f "$BOOTSTRAP_ENV" ]] || die "Could not find $BOOTSTRAP_ENV"
   set -a
   # shellcheck disable=SC1090
   source "$BOOTSTRAP_ENV"
@@ -28,7 +28,7 @@ source "${SCRIPT_DIR}/lib/preflight.sh"
 main(){
   load_env
   run_preflight
-  log "Doctor 检查通过"
+  log "Doctor checks passed"
 }
 
 main "$@"
