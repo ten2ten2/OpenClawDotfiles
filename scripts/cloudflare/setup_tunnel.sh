@@ -38,7 +38,7 @@ main(){
   need_root
   load_env
 
-  command -v cloudflared >/dev/null 2>&1 || die "未安装 cloudflared（先跑 scripts/linode/prep_4gb.sh 或 prep_8gb.sh）"
+  command -v cloudflared >/dev/null 2>&1 || die "未安装 cloudflared（先跑 scripts/ubuntu/prep.sh）"
   command -v jq >/dev/null 2>&1 || die "缺少 jq（prep 脚本会安装）"
 
   log "Cloudflare 登录（会输出授权 URL，用浏览器打开完成授权）"
