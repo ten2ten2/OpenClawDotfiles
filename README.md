@@ -10,34 +10,6 @@
 - 生成 pgvector(Postgres) + Valkey infra（可选直接启动）
 - Web 后台仅通过 Cloudflare Tunnel 暴露
 
-## 目录结构
-```text
-.
-├── README.md
-├── scripts/
-│   ├── ubuntu/
-│   │   ├── prep.sh
-│   │   ├── doctor.sh
-│   │   └── lib/
-│   │       ├── preflight.sh
-│   │       ├── tuning.sh
-│   │       ├── system.sh
-│   │       ├── docker.sh
-│   │       ├── cloudflared.sh
-│   │       └── infra.sh
-│   └── cloudflare/
-│       └── setup_tunnel.sh
-├── templates/
-│   ├── bootstrap.env.example
-│   └── infra/
-│       ├── docker-compose.infra.yml.example
-│       └── db-init/01-pgvector.sql
-└── docs/
-    ├── tuning-matrix.md
-    ├── preflight-checks.md
-    └── migration.md
-```
-
 ## 最低要求（默认阻断）
 - Ubuntu `24.04+`
 - `apt-get update` 可用（外网/镜像源可用）
@@ -50,7 +22,13 @@
 
 ## 快速开始
 
-### 1) 准备 bootstrap.env（在目标服务器）
+### 1) 获取仓库（在目标服务器）
+```bash
+git clone <YOUR_REPO_URL> OpenClawDotfiles
+cd OpenClawDotfiles
+```
+
+### 2) 准备 bootstrap.env（在目标服务器）
 ```bash
 sudo mkdir -p /opt/openclaw
 sudo cp templates/bootstrap.env.example /opt/openclaw/bootstrap.env
@@ -58,7 +36,7 @@ sudo chmod 600 /opt/openclaw/bootstrap.env
 sudo vim /opt/openclaw/bootstrap.env
 ```
 
-### 2) 运行主入口
+### 3) 运行主入口
 ```bash
 sudo bash scripts/ubuntu/prep.sh
 ```
@@ -68,7 +46,7 @@ sudo bash scripts/ubuntu/prep.sh
 START_INFRA=1 sudo -E bash scripts/ubuntu/prep.sh
 ```
 
-### 3) 配置 Cloudflare Tunnel
+### 4) 配置 Cloudflare Tunnel
 ```bash
 sudo bash scripts/cloudflare/setup_tunnel.sh
 ```
@@ -112,6 +90,3 @@ sudo bash scripts/ubuntu/doctor.sh
 - 不要提交 `~/.cloudflared/*.json` 或 `/etc/cloudflared/*.json`
 - 数据库/Valkey 不开放公网端口
 - OpenClaw Web 后台只监听 `127.0.0.1` 或 Docker 内网
-
-## 迁移说明
-旧 Linode 入口已移除，详见 [docs/migration.md](docs/migration.md)。
