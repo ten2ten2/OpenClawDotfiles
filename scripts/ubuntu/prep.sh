@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 BOOTSTRAP_ENV="${BOOTSTRAP_ENV:-/opt/openclaw/bootstrap.env}"
-START_INFRA="${START_INFRA:-0}"
+START_INFRA="${START_INFRA:-1}"
 
 log(){ echo -e "\n[+] $*\n"; }
 warn(){ echo -e "\n[!] $*\n" >&2; }
@@ -38,12 +38,28 @@ load_env(){
   : "${MIN_CPU_CORES:=2}"
   : "${MIN_DISK_FREE_GB:=80}"
   : "${FORCE_RAM_TIER:=}"
+
+  : "${OPENCLAW_ENABLE_DOCKER_GATEWAY:=1}"
+  : "${OPENCLAW_REPO_URL:=https://github.com/openclaw/openclaw.git}"
+  : "${OPENCLAW_REPO_REF:=main}"
+  : "${OPENCLAW_GATEWAY_DIR:=/opt/openclaw/gateway}"
+  : "${OPENCLAW_SHARED_NETWORK:=openclaw-shared}"
+  : "${OPENCLAW_AUTOWIRE_INFRA:=1}"
+  : "${OPENCLAW_AGENT_TARGET:=10}"
+  : "${OPENCLAW_WORKER_PER_AGENTS:=2}"
+  : "${OPENCLAW_DOCKER_APT_PACKAGES:=}"
+  : "${OPENCLAW_EXTRA_MOUNTS:=}"
+  : "${OPENCLAW_HOME_VOLUME:=}"
+  : "${ENABLE_ZRAM:=1}"
+  : "${ENABLE_SWAPFILE:=1}"
 }
 
 # shellcheck source=./lib/preflight.sh
 source "${SCRIPT_DIR}/lib/preflight.sh"
 # shellcheck source=./lib/tuning.sh
 source "${SCRIPT_DIR}/lib/tuning.sh"
+# shellcheck source=./lib/budget.sh
+source "${SCRIPT_DIR}/lib/budget.sh"
 # shellcheck source=./lib/system.sh
 source "${SCRIPT_DIR}/lib/system.sh"
 # shellcheck source=./lib/docker.sh
@@ -54,9 +70,6 @@ source "${SCRIPT_DIR}/lib/cloudflared.sh"
 source "${SCRIPT_DIR}/lib/infra.sh"
 
 print_summary(){
-  local pg_parallel
-  pg_parallel=$(( CPU_CORES > 1 ? CPU_CORES / 2 : 1 ))
-
   cat <<SUM
 ==================== Summary ====================
 Host checks:
@@ -64,15 +77,32 @@ Host checks:
   RAM: ${RAM_GB} GiB | CPU: ${CPU_CORES} cores | Disk Free: ${DISK_FREE_GB} GiB
   RAM Tier: ${RAM_TIER}
 
-Recommended:
-  OPENCLAW_WORKERS_RECOMMENDED=${OPENCLAW_WORKERS_RECOMMENDED}
-  POSTGRES_MAX_PARALLEL_WORKERS_PER_GATHER_RECOMMENDED=${pg_parallel}
-
-Applied defaults (overrideable via bootstrap.env):
-  SWAP_GB=${SWAP_GB}
+Runtime Budgets:
+  OS_RESERVE_GB=${OS_RESERVE_GB}
+  OPENCLAW_MEM_GB=${OPENCLAW_MEM_GB}
+  POSTGRES_MEM_GB=${POSTGRES_MEM_GB}
+  REDIS_MEM_GB=${REDIS_MEM_GB}
+  OPENCLAW_MEM_LIMIT=${OPENCLAW_MEM_LIMIT}
   POSTGRES_MEM_LIMIT=${POSTGRES_MEM_LIMIT}
-  POSTGRES_SHM_SIZE=${POSTGRES_SHM_SIZE}
   VALKEY_MEM_LIMIT=${VALKEY_MEM_LIMIT}
+
+CPU Allocation:
+  OPENCLAW_CPU_QUOTA=${OPENCLAW_CPU_QUOTA} | OPENCLAW_CPU_SHARES=${OPENCLAW_CPU_SHARES}
+  POSTGRES_CPU_QUOTA=${POSTGRES_CPU_QUOTA} | POSTGRES_CPU_SHARES=${POSTGRES_CPU_SHARES}
+  REDIS_CPU_QUOTA=${REDIS_CPU_QUOTA} | REDIS_CPU_SHARES=${REDIS_CPU_SHARES}
+
+OpenClaw:
+  OPENCLAW_AGENT_TARGET=${OPENCLAW_AGENT_TARGET}
+  OPENCLAW_WORKER_PER_AGENTS=${OPENCLAW_WORKER_PER_AGENTS}
+  OPENCLAW_WORKERS_RECOMMENDED=${OPENCLAW_WORKERS_RECOMMENDED}
+
+Postgres Applied:
+  PG_MAX_WORKER_PROCESSES=${PG_MAX_WORKER_PROCESSES}
+  PG_MAX_PARALLEL_WORKERS=${PG_MAX_PARALLEL_WORKERS}
+  PG_MAX_PARALLEL_WORKERS_PER_GATHER=${PG_MAX_PARALLEL_WORKERS_PER_GATHER}
+  PG_MAX_PARALLEL_MAINTENANCE_WORKERS=${PG_MAX_PARALLEL_MAINTENANCE_WORKERS}
+  SWAP_GB=${SWAP_GB}
+  POSTGRES_SHM_SIZE=${POSTGRES_SHM_SIZE}
   VALKEY_MAXMEM=${VALKEY_MAXMEM}
   PG_SHARED_BUFFERS=${PG_SHARED_BUFFERS}
   PG_EFFECTIVE_CACHE_SIZE=${PG_EFFECTIVE_CACHE_SIZE}
@@ -88,7 +118,9 @@ main(){
   load_env
 
   run_preflight
+  mark_user_overrides
   apply_ram_tier_defaults
+  apply_dynamic_budget
 
   apt_basics
   set_identity
@@ -106,7 +138,24 @@ main(){
   install_cloudflared_latest
 
   render_infra
+  ensure_shared_network
   maybe_start_infra
+
+  if [[ "${OPENCLAW_ENABLE_DOCKER_GATEWAY}" == "1" ]]; then
+    OPENCLAW_MEM_LIMIT="${OPENCLAW_MEM_LIMIT}" \
+    OPENCLAW_CPU_QUOTA="${OPENCLAW_CPU_QUOTA}" \
+    OPENCLAW_CPU_SHARES="${OPENCLAW_CPU_SHARES}" \
+    OPENCLAW_GATEWAY_DIR="${OPENCLAW_GATEWAY_DIR}" \
+    OPENCLAW_REPO_URL="${OPENCLAW_REPO_URL}" \
+    OPENCLAW_REPO_REF="${OPENCLAW_REPO_REF}" \
+    OPENCLAW_SHARED_NETWORK="${OPENCLAW_SHARED_NETWORK}" \
+    OPENCLAW_AUTOWIRE_INFRA="${OPENCLAW_AUTOWIRE_INFRA}" \
+    OPENCLAW_DOCKER_APT_PACKAGES="${OPENCLAW_DOCKER_APT_PACKAGES}" \
+    OPENCLAW_EXTRA_MOUNTS="${OPENCLAW_EXTRA_MOUNTS}" \
+    OPENCLAW_HOME_VOLUME="${OPENCLAW_HOME_VOLUME}" \
+    BOOTSTRAP_ENV="${BOOTSTRAP_ENV}" \
+    bash "${REPO_ROOT}/scripts/openclaw/setup_gateway_docker.sh"
+  fi
 
   print_summary
 

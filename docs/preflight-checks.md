@@ -1,23 +1,22 @@
 # Preflight Checks
 
-`scripts/ubuntu/prep.sh` runs preflight checks first.
+`scripts/ubuntu/prep.sh` runs preflight checks before mutation.
 
 ## Blocking Checks (Default)
 - Ubuntu 24.04+
 - root/sudo privileges
 - `apt-get update` works
 - `systemd` is available
-- Required repository connectivity: Docker APT, Cloudflare APT
-- Minimum resource thresholds:
+- Docker and Cloudflare apt endpoints reachable
+- Minimum thresholds:
   - RAM >= 4 GiB
   - CPU >= 2 cores
   - Disk Free >= 80 GiB
 
 ## Warnings
-- If root disk is HDD (ROTA=1), warn about RAG/index/checkpoint risk
-- Print CPU-based recommendations:
-  - `OPENCLAW_WORKERS_RECOMMENDED`
-  - `POSTGRES_MAX_PARALLEL_WORKERS_PER_GATHER_RECOMMENDED`
+- HDD root disk (`ROTA=1`) warning for RAG/index/checkpoint workloads
+- Low-memory degraded-mode warnings can appear during dynamic budgeting
+- Reminder: `4 GiB` is startup minimum
 
 ## Behavior Controls
 - `PREFLIGHT_STRICT=1` and `ALLOW_WEAK_HOST=0`: exit on failures

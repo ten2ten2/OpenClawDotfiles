@@ -8,7 +8,7 @@ apt_basics(){
   apt-get install -y \
     ca-certificates curl gnupg lsb-release \
     ufw fail2ban unattended-upgrades \
-    chrony git jq htop vim
+    chrony git jq htop vim util-linux
   systemctl enable --now chrony || true
 }
 
@@ -83,16 +83,41 @@ unattended_upgrades(){
   dpkg-reconfigure -f noninteractive unattended-upgrades || true
 }
 
-swap_and_sysctl(){
-  log "Configure swap (${SWAP_GB}GB) + sysctl"
+configure_zram(){
+  local zram_gb
+  local zram_mb
 
-  if ! swapon --show | grep -q "/swapfile"; then
-    fallocate -l "${SWAP_GB}G" /swapfile || dd if=/dev/zero of=/swapfile bs=1G count="${SWAP_GB}"
-    chmod 600 /swapfile
-    mkswap /swapfile
-    swapon /swapfile
-    grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  [[ "${ENABLE_ZRAM:-1}" == "1" ]] || return 0
+
+  zram_gb="$(awk -v r="${RAM_GB:-4}" 'BEGIN{v=int(0.25*r); if(v<1)v=1; if(v>8)v=8; printf "%d", v}')"
+  zram_mb=$(( zram_gb * 1024 ))
+
+  log "Configure zram (${zram_gb}GB, lz4, priority 100)"
+  modprobe zram || true
+  [[ -b /dev/zram0 ]] || return 0
+
+  swapoff /dev/zram0 >/dev/null 2>&1 || true
+  echo lz4 > /sys/block/zram0/comp_algorithm || true
+  echo "${zram_mb}M" > /sys/block/zram0/disksize
+  mkswap /dev/zram0
+  swapon -p 100 /dev/zram0
+}
+
+swap_and_sysctl(){
+  log "Configure swap + sysctl"
+
+  if [[ "${ENABLE_SWAPFILE:-1}" == "1" ]]; then
+    log "Configure swapfile (${SWAP_GB}GB)"
+    if ! swapon --show | grep -q "/swapfile"; then
+      fallocate -l "${SWAP_GB}G" /swapfile || dd if=/dev/zero of=/swapfile bs=1G count="${SWAP_GB}"
+      chmod 600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
+      grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    fi
   fi
+
+  configure_zram
 
   cat >/etc/sysctl.d/99-openclaw.conf <<'CFG'
 vm.overcommit_memory=1

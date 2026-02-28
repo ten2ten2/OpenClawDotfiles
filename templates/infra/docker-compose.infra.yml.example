@@ -22,7 +22,19 @@ services:
       - "maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM}"
       - "-c"
       - "max_connections=${PG_MAX_CONNECTIONS}"
+      - "-c"
+      - "max_worker_processes=${PG_MAX_WORKER_PROCESSES}"
+      - "-c"
+      - "max_parallel_workers=${PG_MAX_PARALLEL_WORKERS}"
+      - "-c"
+      - "max_parallel_workers_per_gather=${PG_MAX_PARALLEL_WORKERS_PER_GATHER}"
+      - "-c"
+      - "max_parallel_maintenance_workers=${PG_MAX_PARALLEL_MAINTENANCE_WORKERS}"
     mem_limit: ${POSTGRES_MEM_LIMIT}
+    cpus: ${POSTGRES_CPU_QUOTA}
+    cpu_shares: ${POSTGRES_CPU_SHARES}
+    networks:
+      - openclaw_shared
 
   valkey:
     image: ${VALKEY_IMAGE}
@@ -36,7 +48,16 @@ services:
     volumes:
       - valkey_data:/data
     mem_limit: ${VALKEY_MEM_LIMIT}
+    cpus: ${REDIS_CPU_QUOTA}
+    cpu_shares: ${REDIS_CPU_SHARES}
+    networks:
+      - openclaw_shared
 
 volumes:
   pg_data:
   valkey_data:
+
+networks:
+  openclaw_shared:
+    external: true
+    name: ${OPENCLAW_SHARED_NETWORK}
